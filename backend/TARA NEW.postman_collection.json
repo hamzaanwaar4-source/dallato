@@ -1,0 +1,2903 @@
+{
+  "info": {
+    "_postman_id": "f7c30179-7458-4818-92da-b56c814d49f5",
+    "name": "TARA NEW",
+    "description": "TARA Platform - Travel Agency Relationship & Automation System\n\n**Hierarchy:** SuperAdmin → Agency → Agent → Client\n\n**Commission Flow:**\n1. Client has commission_percent (e.g., 10%)\n2. Total commission = ai_base_total × client.commission_percent\n3. Agent commission = total_commission × (agency.agent_commission / 100)\n4. Agency commission = total_commission - agent_commission\n5. Total price to client = ai_base_total + total_commission\n\n**Test Accounts:**\n- Superadmin: username='superadmin', password='admin123'\n- Agency Admin: username='agency1', password='agency123'\n- Agent 1: username='john_agent', password='agent123'\n- Agent 2: username='sarah_agent', password='agent123'\n\n**Data Isolation:**\n- Agencies only see their own agents and clients\n- Agents only see their own clients\n- Cascade delete: Deleting an entity removes all related data",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "37719471"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// // Save the access token to environment variable",
+                  "// if (pm.response.code === 200) {",
+                  "//     var jsonData = pm.response.json();",
+                  "//     pm.collectionVariables.set('access_token', jsonData.access);",
+                  "//     pm.collectionVariables.set('refresh_token', jsonData.refresh);",
+                  "//     console.log('Access token saved: ' + jsonData.access);",
+                  "// }"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "// {\n//     \"username\": \"agency1\",\n//     \"password\": \"agency123\"\n// }\n\n// {\n//     \"username\": \"superadmin\",\n//     \"password\": \"admin123\"\n// }\n\n\n// {\n//     \"username\": \"john_agent\",\n//     \"password\": \"agent123\"\n// }\n\n\n{\n    \"username\": \"sarah_agent\",\n    \"password\": \"agent123\"\n}\n\n"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/auth/login/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "auth",
+                "login",
+                ""
+              ]
+            },
+            "description": "Login with username and password. Returns user data and JWT tokens.\n\nTest Accounts:\n- Superadmin: username='superadmin', password='admin123'\n- Agency Admin: username='agency1', password='agency123'\n- Agent 1: username='john_agent', password='agent123'\n- Agent 2: username='sarah_agent', password='agent123'"
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"user@example.com\"\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/auth/reset-password/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "auth",
+                "reset-password",
+                ""
+              ]
+            },
+            "description": "Request a password reset link. An email will be sent with a reset token."
+          },
+          "response": []
+        },
+        {
+          "name": "Create New Password",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"token\": \"reset_token_from_email\",\n    \"new_password\": \"newpassword123\",\n    \"confirm_password\": \"newpassword123\"\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/auth/create-password/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "auth",
+                "create-password",
+                ""
+              ]
+            },
+            "description": "Create a new password using the reset token from email."
+          },
+          "response": []
+        }
+      ],
+      "description": "Authentication endpoints for login and password management."
+    },
+    {
+      "name": "Super Admin APIs",
+      "item": [
+        {
+          "name": "Create Agency",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"travel_agency_admin\",\n    \"full_name\": \"John Smith\",\n    \"email\": \"john.smith@travelagency.com\",\n    \"agency_name\": \"Global Travel Agency\",\n    \"default_currency\": \"USD\",\n    \"default_markup_percent\": 15.00,\n    \"agent_commission\": 5.00\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/create/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "create",
+                ""
+              ]
+            },
+            "description": "Create a new agency (Super Admin only). Creates an agency admin user and sends an onboarding email to set password."
+          },
+          "response": []
+        },
+        {
+          "name": "List All Agencies",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/list/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "list",
+                ""
+              ]
+            },
+            "description": "List all agencies with their stats (Super Admin only)."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Agency",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"agency_id\": 1\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/delete/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "delete",
+                ""
+              ]
+            },
+            "description": "Delete an agency and all related data (Super Admin only). This will cascade delete all agents, clients, trips, quotes, etc. associated with the agency."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Agency",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"agency_id\": 1,\n    \"default_markup_percent\": 20.00,\n    \"agent_commission\": 60.00\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/update/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "update",
+                ""
+              ]
+            },
+            "description": "Update agency commission settings (Super Admin only)."
+          },
+          "response": []
+        },
+        {
+          "name": "Toggle Agency Status",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"agency_id\": 1,\n    \"is_active\": false\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/toggle-status/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "toggle-status",
+                ""
+              ]
+            },
+            "description": "Toggle agency active status (Super Admin: activate/deactivate agency and all its agents, Agency Admin: activate/deactivate individual agents)."
+          },
+          "response": []
+        }
+      ],
+      "description": "Super Admin endpoints for managing agencies."
+    },
+    {
+      "name": "Agency APIs",
+      "item": [
+        {
+          "name": "CRM Overview",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/crm-overview?agency_id=1",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "crm-overview"
+              ],
+              "query": [
+                {
+                  "key": "agency_id",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Managed Suppliers",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/managed-suppliers?agency_id=1",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "managed-suppliers"
+              ],
+              "query": [
+                {
+                  "key": "agency_id",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Get list of managed suppliers categorized by type (FLIGHT, HOTEL, BOTH).\n\nResponse includes:\n- flight_suppliers: Airlines and flight providers\n- hotel_suppliers: Hotel chains and accommodation providers\n\nEach supplier includes name, category, commission_percent, and created_at fields."
+          },
+          "response": []
+        },
+        {
+          "name": "Agency Revenue Overview",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/revenue-overview",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "revenue-overview"
+              ]
+            },
+            "description": "Get agency revenue overview showing monthly revenue, revenue change percentage, average quote value, average quote change percentage, pending value, and pending change percentage.\n\nRevenue calculation is based on pre-calculated agency_commission_amount field from quotes with CONFIRMED status. This represents the agency's share of commissions after agent commission is deducted."
+          },
+          "response": []
+        },
+        {
+          "name": "Agency-Wide Revenue Overview (Daily Trend)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/revenue-overview-agency-wide/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "revenue-overview-agency-wide",
+                ""
+              ]
+            },
+            "description": "Get daily revenue trend for the current month across all agents. Returns an array of {date, revenue} showing agency's commission revenue (agency_commission_amount) for each day with confirmed quotes. Aggregates revenue from all agents in the agency."
+          },
+          "response": []
+        },
+        {
+          "name": "Sales Pipeline",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/sales-pipeline",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "sales-pipeline"
+              ]
+            },
+            "description": "Get agency-wide sales pipeline showing quote status distribution across all agents. Returns count and percentage for each quote status: DRAFT, INITIAL_CONTACT, QUOTE_SENT, IN_NEGOTIATION, CONFIRMED, and REMOVED."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Agent Management",
+      "item": [
+        {
+          "name": "Manage Agents Stats",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/agents/stats",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "agents",
+                "stats"
+              ],
+              "query": [
+                {
+                  "key": "agency_id",
+                  "value": "1",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List All Agents",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/agents/list?agency_id=1",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "agents",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "agency_id",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Agent Detail",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/agents/detail?agent_id=1",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "agents",
+                "detail"
+              ],
+              "query": [
+                {
+                  "key": "agent_id",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add New Agent",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"alan_turing\",\n    \"full_name\": \"Alan Turing\",\n    \"email\": \"alan.turing@example.com\",\n    \"phone\": \"+1234567890\",\n    \"location\": \"New York\",\n    \"commission\": 5.00\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/agents/add",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "agents",
+                "add"
+              ]
+            },
+            "description": "Add a new agent to the agency. Requires username, full_name, and email. An onboarding email will be sent to the agent to set their password."
+          },
+          "response": []
+        },
+        {
+          "name": "Set Agent Commission",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"agent_id\": 1,\n    \"commission\": 7.50\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/agents/set-commission",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "agents",
+                "set-commission"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Agent",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"agent_id\": 1,\n    \"name\": \"Alan Turing Updated\",\n    \"phone\": \"+1234567891\",\n    \"location\": \"London\",\n    \"commission\": 12.00\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/agents/update/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "agents",
+                "update",
+                ""
+              ]
+            },
+            "description": "Update agent details including commission (Agency Admin only)."
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Agent",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "agent_id",
+                  "value": "6",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/agents/remove/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "agents",
+                "remove",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Agent Analytics",
+      "item": [
+        {
+          "name": "Agent Analytics Stats",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/analytics/stats?agency_id=1",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "analytics",
+                "stats"
+              ],
+              "query": [
+                {
+                  "key": "agency_id",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Performance Leaderboard (This Month)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/analytics/performance-leaderboard?agency_id=1&month=this_month",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "analytics",
+                "performance-leaderboard"
+              ],
+              "query": [
+                {
+                  "key": "agency_id",
+                  "value": "1"
+                },
+                {
+                  "key": "month",
+                  "value": "this_month"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Conversion Rate by Agent",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/analytics/conversion-rate?agency_id=1",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "analytics",
+                "conversion-rate"
+              ],
+              "query": [
+                {
+                  "key": "agency_id",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Quotes Generated (Monthly)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/analytics/quotes-generated?agency_id=1&period=monthly",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "analytics",
+                "quotes-generated"
+              ],
+              "query": [
+                {
+                  "key": "agency_id",
+                  "value": "1"
+                },
+                {
+                  "key": "period",
+                  "value": "monthly"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Revenue by Destination",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/analytics/revenue-by-destination?agent_id=1",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "analytics",
+                "revenue-by-destination"
+              ],
+              "query": [
+                {
+                  "key": "agent_id",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Top Performing Agents",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/analytics/top-performing-agents/?filter=monthly",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "analytics",
+                "top-performing-agents",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "filter",
+                  "value": "monthly",
+                  "description": "Options: weekly, monthly, overall"
+                }
+              ]
+            },
+            "description": "Get top 3 performing agents based on revenue, bookings, and conversion rate. Filter options: weekly, monthly, overall"
+          },
+          "response": []
+        },
+        {
+          "name": "Upcoming Departures (Agency)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/analytics/upcoming-departures/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "analytics",
+                "upcoming-departures",
+                ""
+              ]
+            },
+            "description": "Get all upcoming departures for all clients across all agents in the agency"
+          },
+          "response": []
+        },
+        {
+          "name": "Agency Dashboard Stats",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/dashboard/stats/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "dashboard",
+                "stats",
+                ""
+              ]
+            },
+            "description": "Get overall agency dashboard stats including total agents, bookings, quotes, conversion rate, and revenue"
+          },
+          "response": []
+        },
+        {
+          "name": "Agency Recent Activity",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/dashboard/recent-activity/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "dashboard",
+                "recent-activity",
+                ""
+              ]
+            },
+            "description": "Get recent activity logs for the agency including agent onboarding, removals, and updates"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Quote Management",
+      "item": [
+        {
+          "name": "List All Quotes",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/quotes/list?agency_id=1",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "quotes",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "agency_id",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Get list of all quotes with status DRAFT, INITIAL_CONTACT, QUOTE_SENT, or IN_NEGOTIATION (excludes CONFIRMED and REMOVED)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Quote Detail",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/quotes/detail?quote_id=13",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "quotes",
+                "detail"
+              ],
+              "query": [
+                {
+                  "key": "quote_id",
+                  "value": "13"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Agent APIs",
+      "item": [
+        {
+          "name": "Agent Settings",
+          "item": [
+            {
+              "name": "Get Agent Settings",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/settings?agent_id=1",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "settings"
+                  ],
+                  "query": [
+                    {
+                      "key": "agent_id",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update Agent Settings",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"agent_id\": 1,\n    \"name\": \"Updated\",\n    \"phone\": \"+1234567890\",\n    \"location\": \"San Francisco\",\n    \"default_commission\": 8.00\n}"
+                },
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/settings/",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "settings",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Client Management",
+          "item": [
+            {
+              "name": "List All Clients",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/clients/list?agent_id=1",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "clients",
+                    "list"
+                  ],
+                  "query": [
+                    {
+                      "key": "agent_id",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Client Detail",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/clients/detail?client_id=17&agent_id=1",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "clients",
+                    "detail"
+                  ],
+                  "query": [
+                    {
+                      "key": "client_id",
+                      "value": "17"
+                    },
+                    {
+                      "key": "agent_id",
+                      "value": "1"
+                    }
+                  ]
+                },
+                "description": "Get detailed information about a specific client including notes and commission_percent fields.\n\nResponse includes:\n- Basic info: id, full_name, email, phone, dob, client_type\n- Travel preferences: destination, origin, travel_date, budget_range, travel_style\n- Business: commission_percent (client-specific commission percentage)\n- Notes: notes (client notes/preferences)\n- Family: family_members array\n- Stats: total_trips, total_quotes, lifetime_value"
+              },
+              "response": []
+            },
+            {
+              "name": "Create New Client",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"agent_id\": 1,\n    \"full_name\": \"Emma Sterlingg\",\n    \"dob\": \"1987-08-08\",\n    \"client_type\": \"FAMILY_FRIENDS\",\n    \"email\": \"emma.sterling@example.com\",\n    \"phone\": \"+18288788880\",\n    \"travel_date\": \"2026-06-15\",\n    \"destination\": \"Paris\",\n    \"origin\": \"New York, JFK\",\n    \"budget_range\": \"$10000+\",\n    \"travel_style\": \"LUXURY\",\n    \"commission_percent\": 10.00,\n    \"notes\": \"Vegetarian, Wheelchair accessible, Anniversary trip\",\n    \"family_members\": [\n        {\n            \"full_name\": \"Gary\",\n            \"relation\": \"SPOUSE\",\n            \"age_group\": \"ADULT\"\n        },\n        {\n            \"full_name\": \"Angliena\",\n            \"relation\": \"CHILD\",\n            \"age_group\": \"CHILD\"\n        }\n    ]\n}"
+                },
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/clients/create/",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "clients",
+                    "create",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update Client",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"client_id\": 1,\n    \"full_name\": \"Updated Client Name\",\n    \"phone\": \"+19999999999\",\n    \"destination\": \"Tokyo\",\n    \"commission_percent\": 12.00\n}"
+                },
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/clients/update",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "clients",
+                    "update"
+                  ]
+                },
+                "description": "Update client information using PARTIAL validation. Only send fields you want to update - all other fields will remain unchanged. This is a true PATCH request that doesn't require all fields to be present.\n\nAvailable fields:\n- client_id (required): ID of the client to update\n- full_name: Client's full name\n- dob: Date of birth (YYYY-MM-DD)\n- client_type: SOLO, COUPLE, FAMILY_FRIENDS, GROUP\n- email: Email address\n- phone: Phone number\n- travel_date: Preferred travel date\n- destination: Destination\n- origin: Origin location\n- budget_range: Budget range\n- travel_style: ECONOMY, PREMIUM_ECONOMY, BUSINESS, LUXURY, ULTRA_LUXURY\n- commission_percent: Commission percentage for this client\n- notes: Additional notes about the client"
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Client",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "client_id",
+                      "value": "1",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/clients/delete/",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "clients",
+                    "delete",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Client Data",
+          "item": [
+            {
+              "name": "Get Past Trips",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/clients/past-trips?client_id=1",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "clients",
+                    "past-trips"
+                  ],
+                  "query": [
+                    {
+                      "key": "client_id",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Upcoming Trips",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/clients/upcoming-trips?client_id=1",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "clients",
+                    "upcoming-trips"
+                  ],
+                  "query": [
+                    {
+                      "key": "client_id",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Client Quotes",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/clients/quotes?client_id=1",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "clients",
+                    "quotes"
+                  ],
+                  "query": [
+                    {
+                      "key": "client_id",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Client Notes",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/clients/notes?client_id=1",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "clients",
+                    "notes"
+                  ],
+                  "query": [
+                    {
+                      "key": "client_id",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Trip & Booking Management",
+          "item": [
+            {
+              "name": "Save Trip Data",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"client_id\": 1,\n    \"session_id\": null,\n    \"trip_title\": \"Paris Adventure\",\n    \"start_date\": \"2026-03-15\",\n    \"end_date\": \"2026-03-22\",\n    \"destination_city\": \"Paris\",\n    \"destination_country\": \"France\",\n    \"destination_formatted\": \"Paris, France\",\n    \"to_airport\": \"CDG\",\n    \"from_airport\": \"JFK\",\n    \"currency\": \"USD\",\n    \"ai_base_total\": 3500.00,\n    \"flights\": [\n        {\n            \"flight_type\": \"OUTBOUND\",\n            \"travel_class\": \"ECONOMY\",\n            \"price_per_seat\": 850.00,\n            \"carrier\": \"Air France\",\n            \"flight_currency\": \"USD\",\n            \"departure_airport\": \"JFK\",\n            \"arrival_airport\": \"CDG\",\n            \"flight_number\": \"AF007\",\n            \"stops\": 0\n        },\n        {\n            \"flight_type\": \"RETURN\",\n            \"travel_class\": \"ECONOMY\",\n            \"price_per_seat\": 850.00,\n            \"carrier\": \"Air France\",\n            \"flight_currency\": \"USD\",\n            \"departure_airport\": \"CDG\",\n            \"arrival_airport\": \"JFK\",\n            \"flight_number\": \"AF008\",\n            \"stops\": 0\n        }\n    ],\n    \"hotels\": [\n        {\n            \"name\": \"Hotel Plaza\",\n            \"price_total\": 1200.00,\n            \"hotel_currency\": \"USD\",\n            \"star_rating\": 4,\n            \"rating\": 8.5,\n            \"country_code\": \"FR\"\n        }\n    ],\n    \"itinerary\": {\n        \"days\": [\n            {\n                \"date\": \"2026-03-15\",\n                \"title\": \"Arrival Day\",\n                \"activities\": [\n                    {\n                        \"title\": \"Check-in Hotel\",\n                        \"description\": \"Arrive and check into hotel\",\n                        \"date\": \"2026-03-15\",\n                        \"itineraryactivity_cost\": 0.00\n                    }\n                ]\n            }\n        ]\n    }\n}"
+                },
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/trips/save/",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "trips",
+                    "save",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Managed Bookings",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/bookings/managed/?agent_id=1",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "bookings",
+                    "managed",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "agent_id",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Mark Quote as Booked",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"client_id\": 1,\n    \"quote_id\": 1\n}"
+                },
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/bookings/mark-booked/",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "bookings",
+                    "mark-booked",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Pending Quotes",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/quotes/pending/?agent_id=1",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "quotes",
+                    "pending",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "agent_id",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Dashboard APIs",
+          "item": [
+            {
+              "name": "Dashboard Analytics",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/dashboard/analytics/?agent_id=1",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "dashboard",
+                    "analytics",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "agent_id",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Upcoming Departures",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/dashboard/upcoming-departures/?agent_id=1",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "dashboard",
+                    "upcoming-departures",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "agent_id",
+                      "value": "1"
+                    }
+                  ]
+                },
+                "description": "Get upcoming departures for booked trips. Returns total_departures (next 30 days), urgent_departures (next 7 days), and departures array (limited to 10 items) with client details, destination, departure dates, and trip information."
+              },
+              "response": []
+            },
+            {
+              "name": "Bookings Map",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/dashboard/bookings-map/?month=January&year=2026",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "dashboard",
+                    "bookings-map",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "month",
+                      "value": "January",
+                      "description": "Month name: January, February, March, April, May, June, July, August, September, October, November, December"
+                    },
+                    {
+                      "key": "year",
+                      "value": "2026",
+                      "description": "Year (optional, defaults to current year)"
+                    }
+                  ]
+                },
+                "description": "Get bookings map filtered by month. Provide month name (January-December) and optional year parameter."
+              },
+              "response": []
+            },
+            {
+              "name": "Revenue Overview",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/dashboard/revenue-overview/?agent_id=1",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "dashboard",
+                    "revenue-overview",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "agent_id",
+                      "value": "1"
+                    }
+                  ]
+                },
+                "description": "Get daily revenue trend for the current month. Returns an array of {date, revenue} showing agent's commission-based revenue for each day with confirmed quotes."
+              },
+              "response": []
+            },
+            {
+              "name": "Top Destinations",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/dashboard/top-destinations/?agent_id=1",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "dashboard",
+                    "top-destinations",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "agent_id",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Agent TODO List",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/todo-list?filter=week",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "todo-list"
+                  ],
+                  "query": [
+                    {
+                      "key": "filter",
+                      "value": "week",
+                      "description": "week or month"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Agent Recent Activity",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/recent-activity",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "recent-activity"
+                  ]
+                },
+                "description": "Get recent activity logs for the logged-in agent including client operations, trip operations, and quote operations."
+              },
+              "response": []
+            },
+            {
+              "name": "Agent Revenue Overview (Commission-Based)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/dashboard/agent-revenue-overview/",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "dashboard",
+                    "agent-revenue-overview",
+                    ""
+                  ]
+                },
+                "description": "Get agent-specific revenue statistics based on commission calculations. Returns monthly revenue (commission-based), revenue change percentage, average quote value, average quote change percentage, pending value, and pending change percentage. All calculations are based on the agent's commission_client_wise percentage applied to quote ai_base_total."
+              },
+              "response": []
+            },
+            {
+              "name": "Agent Sales Pipeline",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/dashboard/sales-pipeline/",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "dashboard",
+                    "sales-pipeline",
+                    ""
+                  ]
+                },
+                "description": "Get agent-specific sales pipeline showing quote status distribution. Returns count and percentage for each quote status: DRAFT, INITIAL_CONTACT, QUOTE_SENT, IN_NEGOTIATION, CONFIRMED, and REMOVED. Shows only quotes belonging to the logged-in agent."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Trip Data",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"trip_id\": 1,\n    \"session_id\": null,\n    \"trip_title\": \"Updated Paris Adventure\",\n    \"ai_base_total\": 4000.00,\n    \"flights\": [\n        {\n            \"flight_type\": \"OUTBOUND\",\n            \"travel_class\": \"BUSINESS\",\n            \"price_per_seat\": 1200.00,\n            \"carrier\": \"Air France\",\n            \"flight_currency\": \"USD\",\n            \"departure_airport\": \"JFK\",\n            \"arrival_airport\": \"CDG\",\n            \"flight_number\": \"AF007\",\n            \"stops\": 0\n        }\n    ]\n}"
+                },
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/trips/update/",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "trips",
+                    "update",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Trip Data",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/trips/delete/?trip_id=1",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "trips",
+                    "delete",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "trip_id",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Quote Notes",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/quotes/notes/?quote_id=1",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "quotes",
+                    "notes",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "quote_id",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Save Quote Notes",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"quote_id\": 1,\n    \"notes\": \"Client prefers window seats. Allergic to peanuts. Requires vegetarian meals.\"\n}"
+                },
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/quotes/notes/",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "quotes",
+                    "notes",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Quote Detail",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/quotes/detail/?quote_id=1",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "quotes",
+                    "detail",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "quote_id",
+                      "value": "1"
+                    }
+                  ]
+                },
+                "description": "Get detailed quote information including trip details, traveler info, flights, hotels, itinerary, and price summary with correct commission breakdown.\n\nPrice Summary includes:\n- ai_base_total: Base cost from AI recommendations\n- agent_commission: Agent's commission amount (portion of client's commission that goes to agent)\n- agency_commission: Agency's commission amount (remaining portion of client's commission)\n- total_price: Final price to client (ai_base_total + agent_commission + agency_commission)\n\nCommission calculation:\n1. Client has commission_percent (e.g., 10%)\n2. Total commission = ai_base_total × commission_percent\n3. Agent gets: total_commission × (agency.agent_commission / 100)\n4. Agency gets: remaining commission"
+              },
+              "response": []
+            },
+            {
+              "name": "Pending Client Approvals",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/dashboard/pending-approvals/",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "dashboard",
+                    "pending-approvals",
+                    ""
+                  ]
+                },
+                "description": "Get clients with pending quotes that need approval/action. Returns clients grouped with their pending quotes (INITIAL_CONTACT, QUOTE_SENT, IN_NEGOTIATION statuses)."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Client Notes",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/clients/notes/?client_id=1",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "clients",
+                    "notes",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "client_id",
+                      "value": "1"
+                    }
+                  ]
+                },
+                "description": "Get notes for a specific client."
+              },
+              "response": []
+            },
+            {
+              "name": "Save Client Notes",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"client_id\": 1,\n    \"notes\": \"VIP client, prefers luxury travel. Anniversary trip in June.\"\n}"
+                },
+                "url": {
+                  "raw": "http://127.0.0.1:8000/api/agent/clients/notes/",
+                  "protocol": "http",
+                  "host": [
+                    "127",
+                    "0",
+                    "0",
+                    "1"
+                  ],
+                  "port": "8000",
+                  "path": [
+                    "api",
+                    "agent",
+                    "clients",
+                    "notes",
+                    ""
+                  ]
+                },
+                "description": "Create or update notes for a specific client."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Super Admin APIs Extended",
+      "item": [
+        {
+          "name": "Get Agency Revenue",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/super-admin/agency-revenue/?agency_id=1",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "super-admin",
+                "agency-revenue",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "agency_id",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Get revenue overview for a specific agency (Super Admin only). Returns current month revenue, revenue change percentage, total revenue, average quote value, and pending value."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Top Destinations",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/super-admin/top-destinations/?agency_id=1",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "super-admin",
+                "top-destinations",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "agency_id",
+                  "value": "1",
+                  "description": "Optional - if not provided, returns top destinations across all agencies"
+                }
+              ]
+            },
+            "description": "Get top 10 destinations by revenue (Super Admin only). Can filter by agency_id or get all agencies' data. Returns destination name, bookings count, and total revenue."
+          },
+          "response": []
+        },
+        {
+          "name": "List all Agencies in super-admin",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        },
+        {
+          "name": "dashboard-stats",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agency/super-admin/dashboard-stats/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agency",
+                "super-admin",
+                "dashboard-stats",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "refresh_token",
+      "value": ""
+    }
+  ]
+}
